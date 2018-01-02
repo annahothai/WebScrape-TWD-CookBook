@@ -6,30 +6,70 @@ import requests
 from datetime import datetime
 import time
 
-#The count sets how many times to run the code
-count = 15
+#Import Twilio (pip install twilio)
+from twilio.rest import Client
 
-def job():
-	
-	page = requests.get("http://www.thinkgeek.com/product/khol/")
-	soup = BeautifulSoup(page.content, 'html.parser')
-	overall = soup.find(id = "product-actions")
-	avail = overall.find('span', {'class':'in_stock'})
-	print(avail.text)
-	print datetime.now().strftime("%Y-%m-%d %H:%M")
-	
-#Printing the output to an out.txt file
-	with open('out.txt', 'a') as f:
-		f.write(avail.text)
-		f.write(datetime.now().strftime("%Y-%m-%d %H:%M"))
-		
-if __name__ == '__main__':
+account_sid = 'AC601f6e7f2aaa12c49625a00f2fffaea0'
+auth_token = '36df316f0cc9366b36ecff983b4f67c9'
+
+client = Client(account_sid, auth_token)
+
+# Following algorithm tries to install the library click if it hasn't already been installed.
+try:
+    import click
+except:
+    import os
+    try:
+        os.system("pip install click")
+        import click
+    except:
+        try:
+            os.system("C:\Python27\Scripts\pip install click")
+            import click
+        except:
+            print("Please install the python library 'click' to run this program.")
+            import sys
+            sys.exit()
+
+
+# Adds commandline argument using the click library and keeps the default value at 15 if nothing is specified.
+@click.command()
+@click.option('--count', default=15, help="number of times to run code.")
+@click.option('--delay', default=30, help="seconds between each webpage check.")
+def main(count, delay):
 	while True:
 		if (count == 0):
 			break
 		else:
 			count -= 1
 			job()
-			time.sleep(30)
+			time.sleep(delay)
 #The code will run every 30 seconds, change this however you want
 		
+
+
+
+def job():
+	
+	page = requests.get("http://www.thinkgeek.com/product/khol/")
+	soup = BeautifulSoup(page.content, 'html.parser')
+	overall = soup.find(id = "product-actions")
+	avail = overall.select("p.availability")
+	print(avail[0].text)
+	print datetime.now().strftime("%Y-%m-%d %H:%M")
+	
+#Printing the output to an out.txt file
+	with open('out.txt', 'a') as f:
+		f.write(avail[0].text)
+		f.write(datetime.now().strftime("%Y-%m-%d %H:%M"))
+		
+#Text the information via Twilio
+	body = avail[0].text + ', ' + str(datetime.now())
+	message = client.messages.create(
+	to="+15038885682",
+    from_="+19717035735",
+    body=body)
+
+		
+if __name__ == '__main__':
+    main()
